@@ -1,26 +1,17 @@
 from TransportLocationProducer import MPKParser
-from multiprocessing import Process
 
 
-def start(worker_number: int = 7):
-    pool = []
 
-    for offset in range(worker_number):
-        p = Process(
-            target=start_producer,
-            kwargs={
-                'limit': 100,
-                'offset': offset,
-                'producer_id': offset
-            })
-        p.start()
-        pool.append(p)
+# url =f'https://www.wroclaw.pl/open-data/api/action/datastore_search?resource_id=17308285-3977-42f7-81b7-fdd168c210a2&offset={offset}&limit={limit}'
 
+# mpk-wroclaw-location
 
-def start_producer(offset: int, producer_id: int, limit: int):
-    producer = MPKParser(producer_id=producer_id, offset=offset, limit=limit)
+#url = os.getenv('target_url')
+#topic_name = os.getenv('topic_name')
+
+def start():
+    producer = MPKParser(producer_id=1, limit=100)
     producer.request()
-    return producer
 
 
 if __name__ == '__main__':
