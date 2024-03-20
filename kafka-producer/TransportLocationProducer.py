@@ -10,20 +10,20 @@ import os
 import time
 
 
-
 class MPKParser:
     def __init__(self, producer_id: int, limit: int = 100):
         logging.info('Started process')
         self.producer_id = producer_id
         self.limit = limit
         self.producer = KafkaProducer(
-            bootstrap_servers=['localhost:29092'],
+            bootstrap_servers=[os.getenv('kafka_bootstrap_server')],
             api_version=(7, 6, 0),
             compression_type='gzip',
             batch_size=100,
             acks=1
 
         )
+        pass
 
     def request(self):
         try:
@@ -31,6 +31,7 @@ class MPKParser:
             url_raw = os.getenv('target_url')
             url = url_raw.format(offset=offset, limit=self.limit)
             topic_name = os.getenv('topic_name')
+            empty_dict = {}
 
             while True:
                 counter = 100
@@ -39,7 +40,7 @@ class MPKParser:
                     response = get(url=url, timeout=10)
                     response.raise_for_status()
                     r = response.json()
-                    for location in r.get('result').get('records'):
+                    for location in r.get('result', empty_dict).get('records', empty_dict):
                         counter += 0
                         self.producer.send(
                             topic=topic_name,
@@ -51,8 +52,5 @@ class MPKParser:
         except (HTTPError, JSONDecodeError) as e:
             print(f"HTTP Error, {e}")
 
-
-def parse(self):
-        pass
 
 

@@ -1,0 +1,105 @@
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "kafka-config-cawz"
+  namespace: "default"
+  labels:
+    app: "kafka"
+data:
+  ZOOKEEPER_CLIENT_PORT: "2181"
+  ZOOKEEPER_TICK_TIME: "2000"
+  KAFKA_BROKER_ID: "1"
+  KAFKA_ZOOKEEPER_CONNECT: "localhost:2181"
+  KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "kafka"
+  namespace: "default"
+  labels:
+    app: "kafka"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "kafka"
+  template:
+    metadata:
+      labels:
+        app: "kafka"
+    spec:
+      containers:
+      - name: "cp-zookeeper-sha256-1"
+        image: "us-central1-docker.pkg.dev/reflected-disk-382709/iariks-images/confluentinc/cp-zookeeper@sha256:6c82b70e592586fb2042cee6947f83cf77aad2940da817dacadf724460757c39"
+        env:
+        - name: "ZOOKEEPER_CLIENT_PORT"
+          valueFrom:
+            configMapKeyRef:
+              key: "ZOOKEEPER_CLIENT_PORT"
+              name: "kafka-config-cawz"
+        - name: "ZOOKEEPER_TICK_TIME"
+          valueFrom:
+            configMapKeyRef:
+              key: "ZOOKEEPER_TICK_TIME"
+              name: "kafka-config-cawz"
+      - name: "cp-kafka-sha256-2"
+        image: "us-central1-docker.pkg.dev/reflected-disk-382709/iariks-images/confluentinc/cp-kafka@sha256:14b640e32f82974bee9e90f8091da024b534df8b554d25e5e8ba542a1d19ec41"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: "KAFKA_BROKER_ID"
+          valueFrom:
+            configMapKeyRef:
+              key: "KAFKA_BROKER_ID"
+              name: "kafka-config-cawz"
+        - name: "KAFKA_ZOOKEEPER_CONNECT"
+          valueFrom:
+            configMapKeyRef:
+              key: "KAFKA_ZOOKEEPER_CONNECT"
+              name: "kafka-config-cawz"
+        - name: "KAFKA_ADVERTISED_LISTENERS"
+          value: "PLAINTEXT://$(MY_POD_IP):9092,PLAINTEXT_HOST://localhost:29092"
+        - name: "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP"
+          valueFrom:
+            configMapKeyRef:
+              key: "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP"
+              name: "kafka-config-cawz"
+        - name: "KAFKA_INTER_BROKER_LISTENER_NAME"
+          valueFrom:
+            configMapKeyRef:
+              key: "KAFKA_INTER_BROKER_LISTENER_NAME"
+              name: "kafka-config-cawz"
+        - name: "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR"
+          valueFrom:
+            configMapKeyRef:
+              key: "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR"
+              name: "kafka-config-cawz"
+---
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "kafka-hpa-ewq4"
+  namespace: "default"
+  labels:
+    app: "kafka"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "kafka"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80

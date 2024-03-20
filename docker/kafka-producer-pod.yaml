@@ -1,0 +1,78 @@
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "kafka-producer-config-qljo"
+  namespace: "default"
+  labels:
+    app: "kafka-producer"
+data:
+  kafka_bootstrap_server: "34.118.238.58:9092"
+  target_url: "https://www.wroclaw.pl/open-data/api/action/datastore_search?resource_id=17308285-3977-42f7-81b7-fdd168c210a2&offset={offset}&limit={limit}"
+  topic_name: "mpk-wroclaw-location"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "kafka-producer"
+  namespace: "default"
+  labels:
+    app: "kafka-producer"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "kafka-producer"
+  template:
+    metadata:
+      labels:
+        app: "kafka-producer"
+    spec:
+      containers:
+      - name: "kafka-producer-sha256-1"
+        image: "us-central1-docker.pkg.dev/reflected-disk-382709/iariks-images/kafka-producer@sha256:c7f061448c32b69ad8f91cfeefc67730af1b8bdee87bd38f775db510d52f1a8d"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: "kafka_bootstrap_server"
+          valueFrom:
+            configMapKeyRef:
+              key: "kafka_bootstrap_server"
+              name: "kafka-producer-config-qljo"
+        - name: "target_url"
+          valueFrom:
+            configMapKeyRef:
+              key: "target_url"
+              name: "kafka-producer-config-qljo"
+        - name: "topic_name"
+          valueFrom:
+            configMapKeyRef:
+              key: "topic_name"
+              name: "kafka-producer-config-qljo"
+---
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "kafka-producer-hpa-dq4q"
+  namespace: "default"
+  labels:
+    app: "kafka-producer"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "kafka-producer"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80
